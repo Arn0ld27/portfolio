@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Living in the IT Era | Cyberpunk Nexus</title>
+  <!-- Google Fonts + Font Awesome 6 -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ============================================ */
+    /* LANDING PAGE - PREMIUM CYBERPUNK DESIGN      */
+    /* ============================================ */
+    .landing-page {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10000;
+      background: radial-gradient(ellipse at center, #0a0f1a 0%, #020408 100%);
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+      overflow: hidden;
+    }
+    .landing-page.hide {
+      opacity: 0;
+      visibility: hidden;
+    }
+    
+    /* Canvas for binary rain effect */
+    #matrixCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    
+    /* Animated grid background */
+    .grid-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      z-index: 1;
+      animation: gridMove 20s linear infinite;
+    }
+    @keyframes gridMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(40px, 40px); }
+    }
+    
+    /* Glowing orbs */
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.4;
+      z-index: 1;
+      animation: floatOrb 12s ease-in-out infinite;
+    }
+    .orb1 {
+      width: 300px;
+      height: 300px;
+      background: #00e5ff;
+      top: 10%;
+      left: -100px;
+    }
+    .orb2 {
+      width: 400px;
+      height: 400px;
+      background: #ff00ff;
+      bottom: -150px;
+      right: -150px;
+      animation-delay: -3s;
+    }
+    .orb3 {
+      width: 200px;
+      height: 200px;
+      background: #00ff88;
+      top: 60%;
+      left: 60%;
+      animation-delay: -6s;
+      filter: blur(80px);
+    }
+    @keyframes floatOrb {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(30px, -30px) scale(1.1); }
+    }
+    
+    /* Landing content */
+    .landing-content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: white;
+      backdrop-filter: blur(2px);
+    }
+    
+    /* Hidden back button on landing page (same style as module system) */
+    .hidden-back-zone-landing {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      width: 70px;
+      height: 70px;
+      z-index: 10001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .back-btn-landing {
+      background: #00e5ff;
+      border-radius: 50px;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      color: #022b36;
+      cursor: pointer;
+      transition: 0.2s;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.8);
+      text-decoration: none;
+      box-shadow: 0 0 10px rgba(0,229,255,0.5);
+    }
+    .hidden-back-zone-landing:hover .back-btn-landing {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+    
+    /* Cyberpunk glitch title */
+    .glitch-wrapper {
+      margin-bottom: 1rem;
+    }
+    .glitch-title {
+      font-size: 5.5rem;
+      font-weight: 800;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      position: relative;
+      text-shadow: 0 0 30px #00e5ff, 0 0 60px #00e5ff;
+      animation: glitchText 4s infinite;
+    }
+    .glitch-title::before,
+    .glitch-title::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .glitch-title::before {
+      animation: glitch1 2s infinite;
+      color: #ff00ff;
+      z-index: -1;
+    }
+    .glitch-title::after {
+      animation: glitch2 3s infinite;
+      color: #00e5ff;
+      z-index: -2;
+    }
+    @keyframes glitch1 {
+      0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+      5% { clip-path: inset(20% 0 30% 0); transform: translate(-3px, 2px); }
+      10% { clip-path: inset(60% 0 10% 0); transform: translate(3px, -2px); }
+      15% { clip-path: inset(0 0 0 0); transform: translate(0); }
+    }
+    @keyframes glitch2 {
+      0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+      5% { clip-path: inset(40% 0 20% 0); transform: translate(3px, -1px); }
+      10% { clip-path: inset(10% 0 70% 0); transform: translate(-3px, 1px); }
+      15% { clip-path: inset(0 0 0 0); transform: translate(0); }
+    }
+    @keyframes glitchText {
+      0%, 100% { text-shadow: 0 0 30px #00e5ff, 0 0 60px #00e5ff; }
+      5% { text-shadow: -3px 0 red, 3px 0 blue; }
+      10% { text-shadow: 3px 0 cyan, -3px 0 magenta; }
+    }
+    
+    /* Animated subtitle with typing effect */
+    .subtitle-container {
+      margin-bottom: 2rem;
+      font-family: monospace;
+    }
+    .subtitle {
+      font-size: 1.3rem;
+      letter-spacing: 3px;
+      color: #00e5ff;
+      font-weight: 300;
+      border-right: 2px solid #00e5ff;
+      white-space: nowrap;
+      overflow: hidden;
+      display: inline-block;
+      animation: typing 4s steps(50, end), blink-caret 0.75s step-end infinite;
+    }
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+    @keyframes blink-caret {
+      from, to { border-color: transparent; }
+      50% { border-color: #00e5ff; }
+    }
+    
+    /* Button Group Styles */
+    .button-group {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+    
+    /* Futuristic button - original style */
+    .enter-btn {
+      padding: 1rem 2.8rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: transparent;
+      border: 2px solid #00e5ff;
+      color: #00e5ff;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      letter-spacing: 4px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .enter-btn:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0,229,255,0.6), transparent);
+      transition: left 0.5s;
+    }
+    .enter-btn:hover:before {
+      left: 100%;
+    }
+    .enter-btn:hover {
+      background: #00e5ff;
+      color: #022b36;
+      box-shadow: 0 0 40px #00e5ff, 0 0 80px #00e5ff;
+      transform: scale(1.05);
+      letter-spacing: 5px;
+    }
+    
+    /* Secondary button style (pink/magenta) */
+    .secondary-btn {
+      border-color: #ff00ff;
+      color: #ff00ff;
+    }
+    .secondary-btn:hover {
+      background: #ff00ff;
+      color: #1a0033;
+      box-shadow: 0 0 40px #ff00ff, 0 0 80px #ff00ff;
+    }
+    
+    /* Tertiary button style (green) */
+    .tertiary-btn {
+      border-color: #00ff88;
+      color: #00ff88;
+    }
+    .tertiary-btn:hover {
+      background: #00ff88;
+      color: #003322;
+      box-shadow: 0 0 40px #00ff88, 0 0 80px #00ff88;
+    }
+    
+    /* Floating binary particles */
+    .binary-particle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 10001;
+      font-family: monospace;
+      font-weight: bold;
+      animation: binaryFloat 1s ease-out forwards;
+    }
+    @keyframes binaryFloat {
+      0% { opacity: 1; transform: translateY(0) scale(0.8); }
+      100% { opacity: 0; transform: translateY(-100px) scale(1.5); }
+    }
+    
+    /* ========== LOADING ANIMATION ========== */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, #0a0f1a 0%, #020408 100%);
+      z-index: 20000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+      opacity: 0;
+      visibility: hidden;
+    }
+    .loading-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .cyber-loader {
+      position: relative;
+      width: 120px;
+      height: 120px;
+    }
+    .cyber-loader .ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      border-top-color: #00e5ff;
+      animation: spinRing 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    }
+    .cyber-loader .ring:nth-child(2) {
+      border-top-color: #ff00ff;
+      animation-delay: -0.4s;
+      width: 80%;
+      height: 80%;
+      top: 10%;
+      left: 10%;
+    }
+    .cyber-loader .ring:nth-child(3) {
+      border-top-color: #00ff88;
+      animation-delay: -0.8s;
+      width: 60%;
+      height: 60%;
+      top: 20%;
+      left: 20%;
+    }
+    @keyframes spinRing {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .loading-text {
+      margin-top: 2rem;
+      font-family: monospace;
+      color: #00e5ff;
+      letter-spacing: 4px;
+      font-size: 1rem;
+      animation: blinkText 1s step-end infinite;
+    }
+    @keyframes blinkText {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .loading-progress {
+      margin-top: 1rem;
+      width: 200px;
+      height: 2px;
+      background: rgba(0,229,255,0.2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .loading-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: #00e5ff;
+      animation: progressLoad 2s ease-out forwards;
+      box-shadow: 0 0 10px #00e5ff;
+    }
+    @keyframes progressLoad {
+      0% { width: 0%; }
+      30% { width: 45%; }
+      70% { width: 85%; }
+      100% { width: 100%; }
+    }
+    
+    /* Module System Styles */
+    .module-system {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+    .module-system.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    :root {
+      --bg-body: linear-gradient(145deg, #eef2f7 0%, #e0e8f0 100%);
+      --container-bg: rgba(255, 255, 255, 0.72);
+      --hero-bg: linear-gradient(115deg, #022b36 0%, #024554 100%);
+      --hero-border: #00e5ff;
+      --card-bg: #ffffff;
+      --card-border: rgba(0, 229, 255, 0.25);
+      --text-primary: #022b36;
+      --text-secondary: #1f5e72;
+      --tag-bg-light: #eef2f9;
+      --info-block-bg: #fafeff;
+      --empty-bg: #fefcf5;
+      --toast-bg: #022b36;
+      --filter-bg: white;
+      --filter-border: #cde0ec;
+      --filter-text: #1c5c7e;
+    }
+    body.dark {
+      --bg-body: linear-gradient(145deg, #0a1219 0%, #101b24 100%);
+      --container-bg: rgba(18, 28, 35, 0.85);
+      --hero-bg: linear-gradient(115deg, #02161e 0%, #022b36 100%);
+      --hero-border: #00e5ff;
+      --card-bg: #16232c;
+      --card-border: rgba(0, 229, 255, 0.35);
+      --text-primary: #e3f2fc;
+      --text-secondary: #b9dfee;
+      --tag-bg-light: #1e3340;
+      --info-block-bg: #0f222c;
+      --empty-bg: #14242e;
+      --toast-bg: #02161e;
+      --filter-bg: #1e2f3a;
+      --filter-border: #2f4a5a;
+      --filter-text: #caf0ff;
+    }
+    body {
+      background: var(--bg-body);
+      font-family: 'Inter', sans-serif;
+      padding: 2rem 2.5rem;
+      transition: background 0.2s, color 0.2s;
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    .desktop-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      background: var(--container-bg);
+      backdrop-filter: blur(6px);
+      border-radius: 2rem;
+      box-shadow: 0 25px 45px -18px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+    .hero-desktop {
+      background: var(--hero-bg);
+      padding: 2rem 2.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      border-bottom: 3px solid var(--hero-border);
+    }
+    .brand h1 { font-size: 2.1rem; font-weight: 700; display: flex; align-items: center; gap: 12px; color: white; }
+    .brand h1 i { color: #00e5ff; }
+    .brand p { color: rgba(255,255,255,0.8); margin-top: 8px; font-size: 0.9rem; }
+    .hero-stats { background: rgba(0, 229, 255, 0.12); padding: 0.7rem 1.6rem; border-radius: 80px; font-weight: 600; border: 1px solid rgba(0,229,255,0.3); color: white; }
+    .hidden-back-zone {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      width: 70px;
+      height: 70px;
+      z-index: 1500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .back-btn {
+      background: #00e5ff;
+      border-radius: 50px;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      color: #022b36;
+      cursor: pointer;
+      transition: 0.2s;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.8);
+      text-decoration: none;
+    }
+    .hidden-back-zone:hover .back-btn {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+    .toolbar-desktop { display: flex; justify-content: space-between; align-items: center; padding: 1.2rem 2.5rem; background: var(--card-bg); border-bottom: 1px solid rgba(0, 229, 255, 0.2); flex-wrap: wrap; gap: 1rem; }
+    .search-group { display: flex; align-items: center; background: var(--filter-bg); border-radius: 60px; padding: 0.3rem 0.3rem 0.3rem 1.5rem; border: 1px solid rgba(0, 229, 255, 0.6); width: 320px; }
+    .search-group input { border: none; padding: 0.75rem 0.8rem; width: 100%; background: transparent; outline: none; color: var(--text-primary); }
+    .filter-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .filter-chip { background: var(--filter-bg); border: 1px solid var(--filter-border); padding: 0.55rem 1.3rem; border-radius: 40px; font-weight: 600; cursor: pointer; color: var(--filter-text); }
+    .filter-chip.active { background: #00e5ff; border-color: #00e5ff; color: #022b36; }
+    .darkmode-toggle { background: var(--filter-bg); border: 1px solid #00e5ff; border-radius: 40px; padding: 0.55rem 1rem; cursor: pointer; color: var(--filter-text); }
+    .modules-grid-desktop { padding: 2rem 2.5rem; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 2rem; }
+    .premium-card { background: var(--card-bg); border-radius: 1.5rem; overflow: hidden; border: 1px solid var(--card-border); transition: 0.2s; }
+    .premium-card:hover { transform: translateY(-5px); border-color: #00e5ff; }
+    .card-accent-header { padding: 1.3rem 1.6rem; border-bottom: 2px solid rgba(0, 229, 255, 0.4); }
+    .card-title { font-size: 1.45rem; font-weight: 800; color: var(--text-primary); }
+    .card-code { display: inline-block; margin-top: 0.5rem; background: rgba(0, 229, 255, 0.15); padding: 0.2rem 0.9rem; border-radius: 30px; font-size: 0.7rem; color: #00e5ff; }
+    .card-content { padding: 1.2rem 1.6rem; }
+    .desc-text { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 1rem; }
+    .meta-strip { display: flex; gap: 12px; margin-bottom: 1rem; }
+    .level-tag { padding: 0.25rem 1rem; border-radius: 30px; font-size: 0.7rem; font-weight: 700; }
+    .level-Beginner { background: #e1f5ea; color: #2c7a4d; }
+    .level-Intermediate { background: #fff0db; color: #c97e0a; }
+    .level-Advanced { background: #ffe8e8; color: #bc5a5a; }
+    body.dark .level-Beginner { background: #0f3d2b; color: #9bffcf; }
+    body.dark .level-Intermediate { background: #6b4513; color: #ffd966; }
+    body.dark .level-Advanced { background: #632626; color: #ff9f9f; }
+    .credit-tag { background: var(--tag-bg-light); padding: 0.25rem 1rem; border-radius: 30px; font-size: 0.7rem; }
+    .info-block { background: var(--info-block-bg); border-left: 4px solid #00e5ff; margin-top: 1rem; padding: 0.8rem 1rem; border-radius: 1.2rem; }
+    .info-title { font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .concepts-wrapper { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .concept-badge { background: var(--tag-bg-light); padding: 0.2rem 0.8rem; border-radius: 20px; font-size: 0.7rem; }
+    .toast-premium { position: fixed; bottom: 24px; right: 24px; background: var(--toast-bg); color: #e0f2fe; padding: 12px 20px; border-radius: 48px; z-index: 2000; opacity: 0; transition: 0.2s; pointer-events: none; border-left: 4px solid #00e5ff; }
+    .toast-premium.show { opacity: 1; }
+    @media (max-width: 780px) { body { padding: 1rem; } .glitch-title { font-size: 2rem; letter-spacing: 2px; } .subtitle { font-size: 0.7rem; } .card-grid { grid-template-columns: 1fr; } .hero-desktop { padding: 1.5rem; } .toolbar-desktop { padding: 1rem; } .modules-grid-desktop { padding: 1.5rem; } .button-group { gap: 0.8rem; } .enter-btn { padding: 0.7rem 1.5rem; font-size: 0.9rem; } }
+  </style>
+</head>
+<body>
+
+<!-- LOADING ANIMATION -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="cyber-loader">
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="ring"></div>
+  </div>
+  <div class="loading-text">INITIALIZING MODULES</div>
+  <div class="loading-progress">
+    <div class="loading-progress-bar"></div>
+  </div>
+</div>
+
+<!-- LANDING PAGE -->
+<div id="landingPage" class="landing-page">
+  <canvas id="matrixCanvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="glow-orb orb1"></div>
+  <div class="glow-orb orb2"></div>
+  <div class="glow-orb orb3"></div>
+  
+  <!-- Hidden back button sa Landing Page (same style) -->
+  <div class="hidden-back-zone-landing">
+    <a href="myportfolio.html" id="landingBackBtn" class="back-btn-landing"><i class="fas fa-arrow-left"></i></a>
+  </div>
+  
+  <div class="landing-content">
+    <div class="glitch-wrapper">
+      <h1 class="glitch-title" data-text="LIVING IN THE IT ERA">LIVING IN THE IT ERA</h1>
+    </div>
+    <div class="subtitle-container">
+      <div class="subtitle">>_ INITIALIZING GE ELECT 2 _</div>
+    </div>
+    
+    <!-- BUTTON GROUP - DINAGDAGAN NG MGA BAGONG BUTTONS -->
+    <div class="button-group">
+      <!-- Original ACCESS MODULES button -->
+      <button id="enterModuleBtn" class="enter-btn">
+        <i class="fas fa-terminal"></i> TOPIC 
+      </button>
+      
+      <!-- BAGONG BUTTON 1: FLIP BOOK (hyperlink) -->
+      <a href="notebook.html" class="enter-btn secondary-btn">
+        <i class="fas fa-book-open"></i> MODULE 
+      </a>
+      
+      <!-- BAGONG BUTTON 2: LAB MANUAL (hyperlink) -->
+
+    </div>
+  </div>
+</div>
+
+<!-- MODULE SYSTEM -->
+<div id="moduleSystem" class="module-system">
+  <div class="hidden-back-zone">
+    <a href="myportfolio.html" id="backToPortfolioBtn" class="back-btn"><i class="fas fa-arrow-left"></i></a>
+  </div>
+  <div class="desktop-container">
+    <div class="hero-desktop">
+      <div class="brand">
+        <h1><i class="fas fa-microchip"></i> Living in the IT Era</h1>
+        <p>Complete 10-module curriculum — ICT, internet, ethics, design & emerging tech</p>
+      </div>
+      <div class="hero-stats"><i class="fas fa-layer-group"></i> <span id="totalModulesDesktop">0</span> modules</div>
+    </div>
+    <div class="toolbar-desktop">
+      <div class="search-group"><i class="fas fa-search"></i><input type="text" id="desktopSearch" placeholder="Search modules..."></div>
+      <div style="display: flex; gap: 12px;">
+        <div class="filter-row">
+          <button data-filter="all" class="filter-chip active">All</button>
+          <button data-filter="Beginner" class="filter-chip">Beginner</button>
+          <button data-filter="Intermediate" class="filter-chip">Intermediate</button>
+          <button data-filter="Advanced" class="filter-chip">Advanced</button>
+        </div>
+        <button id="darkModeToggleBtn" class="darkmode-toggle"><i class="fas fa-moon"></i> Dark Mode</button>
+      </div>
+    </div>
+    <div class="modules-grid-desktop"><div id="desktopGrid" class="card-grid"></div></div>
+  </div>
+</div>
+<div id="toastMsgDesktop" class="toast-premium">System ready</div>
+
+<script>
+  // Matrix Binary Rain Effect
+  const canvas = document.getElementById('matrixCanvas');
+  const ctx = canvas.getContext('2d');
+  let width, height, fontSize = 18, drops = [];
+  const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
+  
+  function initMatrix() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    const columns = Math.floor(width / fontSize);
+    drops = [];
+    for (let i = 0; i < columns; i++) drops[i] = Math.random() * -100;
+  }
+  
+  function drawMatrix() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = fontSize + 'px monospace';
+    const columns = Math.floor(width / fontSize);
+    for (let i = 0; i < drops.length; i++) {
+      const text = chars.charAt(Math.floor(Math.random() * chars.length));
+      ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+      if (drops[i] * fontSize > height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+    requestAnimationFrame(drawMatrix);
+  }
+  window.addEventListener('resize', initMatrix);
+  initMatrix();
+  drawMatrix();
+  
+  // Binary particle effect on mouse move over landing page
+  const landingPageDiv = document.getElementById('landingPage');
+  function createBinaryParticle(x, y) {
+    const div = document.createElement('div');
+    div.className = 'binary-particle';
+    div.textContent = Math.random() > 0.5 ? '1' : '0';
+    div.style.left = x + 'px';
+    div.style.top = y + 'px';
+    div.style.position = 'fixed';
+    div.style.color = '#00e5ff';
+    div.style.fontSize = (12 + Math.random() * 10) + 'px';
+    div.style.fontFamily = 'monospace';
+    div.style.fontWeight = 'bold';
+    div.style.textShadow = '0 0 5px #00e5ff';
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 1000);
+  }
+  
+  if (landingPageDiv) {
+    landingPageDiv.addEventListener('mousemove', (e) => {
+      for (let i = 0; i < 2; i++) {
+        createBinaryParticle(e.clientX + (Math.random() - 0.5) * 50, e.clientY + (Math.random() - 0.5) * 40);
+      }
+    });
+  }
+  
+  // Modules Data
+  const modules = [
+    { id: "mod1", title: "Introduction to Information & Communication Technology", code: "ICT-101", level: "Beginner", credits: 3, description: "Comprehensive overview of ICT: history, components, and its transformative role in daily life.", keyConcepts: ["History of ICT", "Digital communication", "Education & e-learning", "Job automation"], applications: ["Online collaboration", "E-commerce", "Social connectivity", "Cloud storage"], funFact: "The term 'ICT' was first used in academic circles in the 1980s." },
+    { id: "mod2", title: "History of Computer: Basic Computing Periods", code: "CMP-102", level: "Beginner", credits: 4, description: "From tally sticks and abacus to ENIAC, UNIVAC, and five generations of computers.", keyConcepts: ["Pre-mechanical age", "Mechanical calculators", "ENIAC & EDVAC", "Microprocessors"], applications: ["Early census machines", "Military computing", "First business computers", "Punch card systems"], funFact: "Ada Lovelace was the first computer programmer in the 1840s." },
+    { id: "mod3", title: "The Web and The Internet", code: "WEB-203", level: "Intermediate", credits: 4, description: "Web evolution: Web 1.0, 2.0, 3.0, semantic web, DNS, servers, and modern uses.", keyConcepts: ["Tim Berners-Lee", "Web 2.0", "Semantic Web", "Cloud integration"], applications: ["Social networks", "E-learning", "Streaming services", "Decentralized web"], funFact: "The first website is still online: info.cern.ch" },
+    { id: "mod4", title: "Netiquette & Computer Ethics", code: "ETH-301", level: "Intermediate", credits: 3, description: "Online behavior rules, cybercrime laws (RA 10175), phishing, malware, and digital privacy.", keyConcepts: ["Golden Rule online", "Copyright", "Digital privacy", "RA 10627"], applications: ["Safe social media", "Professional email", "Data protection", "Cyberlaw compliance"], funFact: "First email spam was sent in 1978 over ARPANET." },
+    { id: "mod5", title: "Digital Technology & Social Change", code: "DGT-202", level: "Intermediate", credits: 4, description: "How digital transformation reshapes society, employment, healthcare, and teleworking.", keyConcepts: ["Digital age", "Automation", "Teleworking", "Digital divide"], applications: ["Virtual collaboration", "Online healthcare", "Remote education", "Smart governance"], funFact: "Over 60% of global workforce uses digital collaboration tools daily." },
+    { id: "mod6", title: "Internet of Things (IoT)", code: "IOT-310", level: "Advanced", credits: 4, description: "Smart devices, sensors, cloud integration, smart cities, security challenges.", keyConcepts: ["Smart sensors", "M2M communication", "Edge computing", "Smart agriculture"], applications: ["Smart thermostats", "Connected cars", "Health monitors", "Industrial IoT"], funFact: "First IoT device was a toaster connected to the internet in 1990." },
+    { id: "mod7", title: "Current & Emerging Tech Trends", code: "TRD-402", level: "Advanced", credits: 5, description: "AI, Machine Learning, VR, AR, Blockchain, 5G, Big Data analytics.", keyConcepts: ["Generative AI", "Immersive VR/AR", "Blockchain", "5G low latency"], applications: ["AI diagnostics", "AR navigation", "Smart factories", "NFT & metaverse"], funFact: "463 exabytes of data are created each day globally by 2025." },
+    { id: "mod8", title: "Imaging and Design for Social Impact", code: "DES-101", level: "Beginner", credits: 3, description: "Graphic design fundamentals: lines, shapes, color theory, typography, branding.", keyConcepts: ["Visual hierarchy", "Color psychology", "White space", "Contrast"], applications: ["Social media graphics", "Infographics", "Awareness posters", "Logo design"], funFact: "90% of information transmitted to the brain is visual." },
+    { id: "mod9", title: "Photo Imaging & Post Processing", code: "PHO-204", level: "Intermediate", credits: 3, description: "Exposure triangle, lighting, composition, RAW editing, Photoshop workflow.", keyConcepts: ["Depth of field", "White balance", "RAW editing", "Noise reduction"], applications: ["Portrait retouching", "Product photography", "Creative compositing", "Color grading"], funFact: "First digital camera was invented in 1975 weighing 8 pounds." },
+    { id: "mod10", title: "Creating Infographics for Social Campaigns", code: "INF-305", level: "Advanced", credits: 4, description: "Data visualization, infographic layouts, color schemes, storytelling for social change.", keyConcepts: ["Data storytelling", "Chart selection", "Visual metaphors", "Negative space"], applications: ["Advocacy campaigns", "Public health info", "Educational posters", "Annual reports"], funFact: "Infographics are processed 60,000x faster than plain text." }
+  ];
+
+  let currentFilter = "all", searchKeyword = "";
+  function filterModules() {
+    let filtered = [...modules];
+    if (currentFilter !== "all") filtered = filtered.filter(m => m.level === currentFilter);
+    if (searchKeyword.trim()) {
+      const kw = searchKeyword.trim().toLowerCase();
+      filtered = filtered.filter(m => m.title.toLowerCase().includes(kw) || m.description.toLowerCase().includes(kw) || m.keyConcepts.some(c => c.toLowerCase().includes(kw)));
+    }
+    return filtered;
+  }
+  function escapeHtml(str) { return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+  function renderModulesUI() {
+    const filtered = filterModules();
+    const totalSpan = document.getElementById("totalModulesDesktop");
+    if (totalSpan) totalSpan.innerText = filtered.length;
+    const container = document.getElementById("desktopGrid");
+    if (!container) return;
+    if (filtered.length === 0) { container.innerHTML = `<div style="text-align:center; padding:3rem;"><i class="fas fa-search fa-2x" style="color:#00e5ff;"></i><p style="margin-top:1rem;">No modules found.</p></div>`; return; }
+    container.innerHTML = filtered.map(mod => {
+      let levelClass = mod.level === "Beginner" ? "level-Beginner" : mod.level === "Intermediate" ? "level-Intermediate" : "level-Advanced";
+      return `<div class="premium-card"><div class="card-accent-header"><div class="card-title">${escapeHtml(mod.title)}</div><div class="card-code">${escapeHtml(mod.code)} · ${mod.credits} ECTS</div></div><div class="card-content"><div class="desc-text">${escapeHtml(mod.description)}</div><div class="meta-strip"><span class="level-tag ${levelClass}">${mod.level}</span><span class="credit-tag"><i class="fas fa-certificate"></i> ${mod.credits} credits</span></div><div class="info-block"><div class="info-title"><i class="fas fa-brain"></i> Core concepts</div><div class="concepts-wrapper">${mod.keyConcepts.slice(0,4).map(c => `<span class="concept-badge">${escapeHtml(c)}</span>`).join('')}</div></div><div class="info-block"><div class="info-title"><i class="fas fa-bullhorn"></i> Applications</div><div class="concepts-wrapper">${mod.applications.slice(0,4).map(a => `<span class="concept-badge">${escapeHtml(a)}</span>`).join('')}</div></div>${mod.funFact ? `<div class="info-block"><div class="info-title"><i class="fas fa-lightbulb"></i> Did you know?</div><div style="font-size:0.8rem;">${escapeHtml(mod.funFact)}</div></div>` : ''}</div></div>`;
+    }).join('');
+  }
+
+  // Loading animation elements
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  
+  function showLoading() {
+    loadingOverlay.classList.add('active');
+  }
+  
+  function hideLoading() {
+    setTimeout(() => {
+      loadingOverlay.classList.remove('active');
+    }, 500);
+  }
+  
+  // ========== NAVIGATION ==========
+  const landingPageEl = document.getElementById('landingPage');
+  const moduleSystemEl = document.getElementById('moduleSystem');
+  const enterBtn = document.getElementById('enterModuleBtn');
+  
+  // ENTER button: show loading animation, then transition to modules
+  if (enterBtn) {
+    enterBtn.addEventListener('click', () => {
+      showLoading();
+      // Simulate loading time for dramatic effect
+      setTimeout(() => {
+        landingPageEl.classList.add('hide');
+        setTimeout(() => {
+          moduleSystemEl.classList.add('visible');
+          renderModulesUI();
+          hideLoading();
+          showToast(" WELCOME ");
+        }, 200);
+      }, 2000); // 2 seconds loading animation
+    });
+  }
+  
+  // Search and filter
+  const searchInput = document.getElementById("desktopSearch");
+  if (searchInput) searchInput.addEventListener("input", (e) => { searchKeyword = e.target.value; renderModulesUI(); });
+  
+  document.querySelectorAll(".filter-chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".filter-chip").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentFilter = btn.getAttribute("data-filter");
+      renderModulesUI();
+    });
+  });
+  
+  // Dark mode toggle
+  const darkBtn = document.getElementById("darkModeToggleBtn");
+  if (darkBtn) {
+    darkBtn.addEventListener("click", () => { 
+      document.body.classList.toggle("dark"); 
+      darkBtn.innerHTML = document.body.classList.contains("dark") ? '<i class="fas fa-sun"></i> Light Mode' : '<i class="fas fa-moon"></i> Dark Mode'; 
+      showToast(document.body.classList.contains("dark") ? "🌙 Dark mode engaged" : "☀️ Light mode restored");
+    });
+  }
+  
+  function showToast(msg) { 
+    const toast = document.getElementById("toastMsgDesktop"); 
+    if (toast) {
+      toast.textContent = msg; 
+      toast.classList.add("show"); 
+      setTimeout(() => toast.classList.remove("show"), 2200); 
+    }
+  }
+  
+  // Toast sa mga bagong buttons (hover effect)
+  const externalLinks = document.querySelectorAll('.button-group a');
+  externalLinks.forEach(link => {
+    link.addEventListener('mouseenter', (e) => {
+      const text = link.querySelector('i:first-child')?.nextSibling?.textContent?.trim() || 
+                   link.textContent.replace(/[^\w\s]/g, '').trim();
+      if (text) showToast(`🔗 Opening ${text}...`);
+    });
+  });
+  
+  // Initial render
+  renderModulesUI();
+  
+  // Ensure loading overlay is hidden on page load
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      if (loadingOverlay) loadingOverlay.classList.remove('active');
+    }, 500);
+  });
+</script>
+</body>
+</html>

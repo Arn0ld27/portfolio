@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Fullscreen Flipbook | Immersive Reader</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* FULLSCREEN OVERRIDE: body and html fill entire screen with no margins */
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #050b12;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        /* MAIN FLIPBOOK CONTAINER - always fullscreen */
+        .flipbook-full {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0f;
+            display: flex;
+            flex-direction: column;
+            z-index: 1;
+        }
+
+        /* iframe wrapper takes all available space */
+        .flipbook-container {
+            flex: 1;
+            width: 100%;
+            background: #000000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* iframe styling - perfect full immersive */
+        .flipbook-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #111;
+            display: block;
+            transition: opacity 0.2s ease;
+        }
+
+        /* ----- HIDDEN BUTTON (top-left, appears on hover over area) ----- */
+        .hidden-control {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.2s, transform 0.2s;
+            pointer-events: none; /* hidden until hover trigger area */
+        }
+
+        /* trigger area: invisible zone at top-left corner that reveals button on hover */
+        .hover-trigger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 110px;
+            height: 100px;
+            z-index: 9998;
+            background: transparent;
+            pointer-events: auto;
+        }
+
+        /* when hovering the trigger OR the button itself, the button becomes visible */
+        .hover-trigger:hover + .hidden-control,
+        .hidden-control:hover {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        /* style for the action button group */
+        .control-btn {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 229, 255, 0.5);
+            border-radius: 48px;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 229, 255, 0.85);
+            border-color: #ffffff;
+            transform: scale(1.02);
+        }
+
+        .control-btn:hover .btn-icon {
+            color: #000;
+        }
+
+        .btn-icon {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #00e5ff;
+            transition: color 0.2s;
+        }
+
+        .btn-text {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+            letter-spacing: 0.3px;
+        }
+
+        .control-btn:hover .btn-text {
+            color: #000;
+        }
+
+        /* ----- LOADING ANIMATION (fullscreen overlay) ----- */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a12;
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 24px;
+            transition: opacity 0.5s ease, visibility 0.3s;
+            pointer-events: none; /* allow clicks to pass through when hidden */
+        }
+
+        /* modern flipbook loader */
+        .book-loader {
+            --size: 70px;
+            width: var(--size);
+            height: var(--size);
+            position: relative;
+            perspective: 300px;
+        }
+
+        .page {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #00e5ff, #007c8a);
+            border-radius: 4px 12px 12px 4px;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
+            transform-origin: left center;
+            animation: flipPage 1.6s infinite ease-in-out;
+            opacity: 0.9;
+        }
+
+        .page:nth-child(1) {
+            animation-delay: 0s;
+            background: linear-gradient(145deg, #00e5ff, #0099aa);
+        }
+
+        .page:nth-child(2) {
+            animation-delay: 0.2s;
+            background: linear-gradient(145deg, #3ce0ff, #00b7cc);
+            transform: scaleX(0.92);
+        }
+
+        .page:nth-child(3) {
+            animation-delay: 0.4s;
+            background: linear-gradient(145deg, #6ae9ff, #00d0e0);
+            transform: scaleX(0.84);
+        }
+
+        @keyframes flipPage {
+            0% {
+                transform: rotateY(0deg);
+                opacity: 0.9;
+            }
+            50% {
+                transform: rotateY(-28deg);
+                opacity: 0.5;
+            }
+            100% {
+                transform: rotateY(0deg);
+                opacity: 0.9;
+            }
+        }
+
+        .loading-text {
+            color: #00e5ff;
+            font-weight: 500;
+            font-size: 1rem;
+            letter-spacing: 1.5px;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 20px;
+            border-radius: 60px;
+            backdrop-filter: blur(4px);
+            font-family: monospace;
+            animation: pulseText 1.2s infinite;
+        }
+
+        @keyframes pulseText {
+            0% { opacity: 0.5; text-shadow: 0 0 0px #00e5ff; }
+            100% { opacity: 1; text-shadow: 0 0 6px #00e5ff; }
+        }
+
+        /* subtle gradient background */
+        .flipbook-full {
+            background: radial-gradient(circle at 20% 30%, #12161c, #030609);
+        }
+
+        /* status bar minimal but informative */
+        .status-mini {
+            position: fixed;
+            bottom: 12px;
+            right: 16px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 11px;
+            color: #aaa;
+            z-index: 9997;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+            font-family: monospace;
+        }
+
+        /* tooltip / swipe hint */
+        .swipe-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 12px;
+            color: #bbfffd;
+            pointer-events: none;
+            z-index: 9996;
+            white-space: nowrap;
+            font-weight: 500;
+            border: 1px solid rgba(0,229,255,0.3);
+            font-family: monospace;
+        }
+
+        @media (max-width: 680px) {
+            .control-btn {
+                padding: 6px 14px;
+            }
+            .btn-text {
+                font-size: 0.7rem;
+            }
+            .swipe-hint {
+                font-size: 9px;
+                bottom: 12px;
+                white-space: nowrap;
+                padding: 4px 12px;
+            }
+            .hover-trigger {
+                width: 80px;
+                height: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- FULLSCREEN FLIPBOOK (always full screen) -->
+<div class="flipbook-full" id="flipbookFull">
+    <div class="flipbook-container">
+        <iframe 
+            class="flipbook-iframe" 
+            id="flipIframe"
+            allowfullscreen="allowfullscreen" 
+            allow="clipboard-write; accelerometer; gyroscope; autoplay" 
+            scrolling="no" 
+            title="Digital Flipbook"
+            src="https://heyzine.com/flip-book/4c72aa0237.html">
+        </iframe>
+    </div>
+</div>
+
+<!-- Hidden button trigger area (top-left invisible zone) -->
+<div class="hover-trigger" id="hoverTrigger"></div>
+
+<!-- Hidden Control Button (appears when hover trigger or button itself) -->
+<div class="hidden-control" id="hiddenControlBtn">
+    <a href="module.html" class="control-btn" id="refreshActionBtn" style="text-decoration: none; display: inline-block;">
+        <span class="btn-icon">⟳</span>
+
+    </a>
+</div>
+
+<!-- Loading overlay (fullscreen animation) -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="book-loader">
+        <div class="page"></div>
+        <div class="page"></div>
+        <div class="page"></div>
+    </div>
+    <div class="loading-text">LOADING FLIPBOOK</div>
+</div>
+
+<!-- subtle status and swipe hint -->
+<div class="status-mini" id="deviceStatus"> immersive mode</div>
+<div class="swipe-hint" id="swipeHintText">↺ swipe or drag to turn pages ↻</div>
+
+<script>
+    (function() {
+        // ---------- DOM elements ----------
+        const iframe = document.getElementById('flipIframe');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const refreshBtn = document.getElementById('refreshActionBtn');
+        const swipeHint = document.getElementById('swipeHintText');
+        const deviceSpan = document.getElementById('deviceStatus');
+        
+        // ---------- Detect mobile / touch for better hints ----------
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // set friendly hint
+        if (isTouchDevice || isMobile) {
+            swipeHint.innerText = ' ';
+            deviceSpan.innerHTML = '  ';
+        } else {
+            swipeHint.innerText = '';
+            deviceSpan.innerHTML = ' ';
+        }
+        
+        // ---------- LOADING LOGIC: show animation until iframe loads completely ----------
+        let loadingFinished = false;
+        let iframeLoaded = false;
+        
+        // Function to hide loading overlay gracefully
+        function hideLoading() {
+            if (!loadingOverlay) return;
+            loadingOverlay.style.opacity = '0';
+            loadingOverlay.style.visibility = 'hidden';
+            // after transition remove from screen but keep for potential future refreshes? We'll reuse.
+            setTimeout(() => {
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'none';
+                }
+            }, 500);
+        }
+        
+        // Show loading again (for refresh)
+        function showLoadingOverlay() {
+            if (!loadingOverlay) return;
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.style.opacity = '1';
+            loadingOverlay.style.visibility = 'visible';
+            loadingFinished = false;
+            iframeLoaded = false;
+        }
+        
+        // When iframe content loads (fully loaded with flipbook)
+        function onIframeLoad() {
+            if (iframeLoaded) return;
+            iframeLoaded = true;
+            // small delay ensures inner flipbook scripts ready
+            setTimeout(() => {
+                if (!loadingFinished) {
+                    loadingFinished = true;
+                    hideLoading();
+                }
+            }, 400);
+        }
+        
+        // Additional fallback: if iframe takes too long, force hide loading after max 5 sec
+        let fallbackTimer = setTimeout(() => {
+            if (!loadingFinished) {
+                loadingFinished = true;
+                hideLoading();
+                console.log("Loading fallback triggered");
+            }
+        }, 4500);
+        
+        // Listen to iframe load event
+        if (iframe) {
+            iframe.addEventListener('load', function() {
+                clearTimeout(fallbackTimer);
+                onIframeLoad();
+            });
+            // Edge case: if iframe already loaded (cached)
+            if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
+                clearTimeout(fallbackTimer);
+                onIframeLoad();
+            }
+        } else {
+            // fallback if no iframe
+            setTimeout(() => {
+                hideLoading();
+            }, 800);
+        }
+        
+        // ---------- REFRESH FUNCTION (with loading animation) ----------
+        function refreshFlipbook() {
+            // Show loading animation again
+            showLoadingOverlay();
+            
+            // Reset loaded flags
+            iframeLoaded = false;
+            loadingFinished = false;
+            
+            // Capture current src
+            const currentSrc = iframe.src;
+            // Force a hard reload: set to about:blank then restore src
+            iframe.src = 'about:blank';
+            
+            // Set new fallback timer for this refresh
+            const refreshFallback = setTimeout(() => {
+                if (!loadingFinished) {
+                    loadingFinished = true;
+                    hideLoading();
+                }
+            }, 5000);
+            
+            // After resetting, reload original src
+            setTimeout(() => {
+                iframe.src = currentSrc;
+                // Re-attach load event to ensure hide after refresh
+                const newLoadHandler = function() {
+                    clearTimeout(refreshFallback);
+                    if (!loadingFinished) {
+                        loadingFinished = true;
+                        hideLoading();
+                    }
+                    iframe.removeEventListener('load', newLoadHandler);
+                };
+                iframe.addEventListener('load', newLoadHandler);
+                // Edge case if load already triggered instantly
+                if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
+                    newLoadHandler();
+                }
+            }, 80);
+            
+            // Haptic feedback on button
+            const btnElem = document.getElementById('refreshActionBtn');
+            if (btnElem) {
+                btnElem.style.transform = 'scale(0.96)';
+                setTimeout(() => {
+                    if (btnElem) btnElem.style.transform = '';
+                }, 150);
+            }
+        }
+        
+        // Attach refresh event to hidden button
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                refreshFlipbook();
+            });
+        }
+        
+        // ---------- Additional UX: guarantee fullscreen always (no exiting possible) ----------
+        // Force fullscreen styling on any resize / orientation. Already all fixed via CSS.
+        // but we add a small check: ensure body and html have no scrollbars, just in case
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+        
+        // Add keyboard shortcut: press 'R' to reload flipbook (also convenient)
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (key === 'r') {
+                e.preventDefault();
+                refreshFlipbook();
+            } else if (key === 'f') {
+                e.preventDefault();
+                // no fullscreen toggle needed — it's always fullscreen,
+                // but we can provide a small visual feedback that it's already fullscreen.
+                const tooltipMsg = document.createElement('div');
+                tooltipMsg.innerText = '✓ Already fullscreen mode';
+                tooltipMsg.style.position = 'fixed';
+                tooltipMsg.style.bottom = '60px';
+                tooltipMsg.style.left = '50%';
+                tooltipMsg.style.transform = 'translateX(-50%)';
+                tooltipMsg.style.background = '#00e5ffcc';
+                tooltipMsg.style.color = '#000';
+                tooltipMsg.style.padding = '6px 14px';
+                tooltipMsg.style.borderRadius = '30px';
+                tooltipMsg.style.fontSize = '12px';
+                tooltipMsg.style.fontWeight = 'bold';
+                tooltipMsg.style.zIndex = '10001';
+                tooltipMsg.style.backdropFilter = 'blur(8px)';
+                tooltipMsg.style.pointerEvents = 'none';
+                document.body.appendChild(tooltipMsg);
+                setTimeout(() => tooltipMsg.remove(), 1500);
+            }
+        });
+        
+        // Optional: when iframe fails to load due to network, show error + retry inside loading?
+        iframe.addEventListener('error', () => {
+            if (!loadingFinished) {
+                loadingFinished = true;
+                hideLoading();
+            }
+            // show a temporary error but not intrusive
+            const errorHint = document.createElement('div');
+            errorHint.innerText = '⚠️ Flipbook connection issue. Click refresh button ↻';
+            errorHint.style.position = 'fixed';
+            errorHint.style.bottom = '80px';
+            errorHint.style.left = '20px';
+            errorHint.style.background = 'rgba(0,0,0,0.7)';
+            errorHint.style.color = '#ffaa66';
+            errorHint.style.padding = '8px 14px';
+            errorHint.style.borderRadius = '30px';
+            errorHint.style.fontSize = '12px';
+            errorHint.style.zIndex = '10002';
+            errorHint.style.backdropFilter = 'blur(10px)';
+            errorHint.style.borderLeft = '3px solid #ffaa66';
+            document.body.appendChild(errorHint);
+            setTimeout(() => errorHint.remove(), 4000);
+        });
+        
+        // Ensure that the hidden button appears both on trigger hover and button hover (done by CSS)
+        // Additional quality: on touch devices, make the hidden button appear when tapping near top-left area?
+        // On mobile, we improve: if user taps the invisible trigger, we show the button for 3 seconds.
+        const triggerZone = document.getElementById('hoverTrigger');
+        if (isTouchDevice && triggerZone) {
+            let touchTimeout;
+            triggerZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const btnControl = document.getElementById('hiddenControlBtn');
+                if (btnControl) {
+                    btnControl.style.opacity = '1';
+                    btnControl.style.visibility = 'visible';
+                    btnControl.style.pointerEvents = 'auto';
+                    if (touchTimeout) clearTimeout(touchTimeout);
+                    touchTimeout = setTimeout(() => {
+                        if (btnControl && !btnControl.matches(':hover')) {
+                            // if not hovered, hide after 3 seconds
+                            btnControl.style.opacity = '0';
+                            btnControl.style.visibility = 'hidden';
+                            btnControl.style.pointerEvents = 'none';
+                        }
+                    }, 3500);
+                }
+            });
+            // also keep button visible when touching button
+            const hiddenDiv = document.getElementById('hiddenControlBtn');
+            if (hiddenDiv) {
+                hiddenDiv.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    if (touchTimeout) clearTimeout(touchTimeout);
+                    hiddenDiv.style.opacity = '1';
+                    hiddenDiv.style.visibility = 'visible';
+                    hiddenDiv.style.pointerEvents = 'auto';
+                });
+                document.addEventListener('touchend', (e) => {
+                    if (!hiddenDiv.contains(e.target) && !triggerZone.contains(e.target)) {
+                        setTimeout(() => {
+                            if (hiddenDiv && hiddenDiv.style.opacity !== '0') {
+                                hiddenDiv.style.opacity = '0';
+                                hiddenDiv.style.visibility = 'hidden';
+                                hiddenDiv.style.pointerEvents = 'none';
+                            }
+                        }, 800);
+                    }
+                });
+            }
+        }
+        
+        // for desktop: ensure hover trigger + button elegant (CSS already works)
+        
+        // ---------- Additional immersive features: status notification on iframe ready ----------
+        // When iframe finally ready we can change status message
+        function finalizeReady() {
+            if (deviceSpan) {
+                deviceSpan.innerHTML = '✓ flipbook ready | enjoy reading';
+                setTimeout(() => {
+                    if (deviceSpan) deviceSpan.innerHTML = ' ';
+                }, 3000);
+            }
+        }
+        
+        // override load final to show final status
+        const originalLoadHandler = onIframeLoad;
+        window.onIframeLoad = function() {
+            originalLoadHandler();
+            finalizeReady();
+        };
+        iframe.addEventListener('load', function() {
+            finalizeReady();
+        });
+        
+        // guarantee loading hides properly on start
+        window.addEventListener('load', () => {
+            // final guard to hide loading if not hidden after everything
+            setTimeout(() => {
+                if (!loadingFinished) {
+                    loadingFinished = true;
+                    hideLoading();
+                }
+            }, 2000);
+        });
+        
+        // Also if the heyzine content sends postMessage? not needed but fine.
+        // Fix double-loading edge case: preload iframe initial load already calls onIframeLoad
+        if (iframe.contentWindow && iframe.src !== 'about:blank') {
+            if (iframe.complete || (iframe.contentDocument && iframe.contentDocument.readyState === 'complete')) {
+                setTimeout(() => {
+                    if (!loadingFinished) {
+                        loadingFinished = true;
+                        hideLoading();
+                    }
+                }, 200);
+            }
+        }
+        
+        // For extra smoothness, we can add a small ripple effect when clicking refresh
+        console.log("Fullscreen flipbook active | hidden button top-left (hover) | loading animation integrated");
+        
+        // Anti-scroll: also lock body touchmove to prevent pulling browser on mobile?
+        function preventScroll(e) {
+            // allow iframe internal scroll? we don't block inside iframe, only container overscroll
+            if (e.target === document.body || e.target === document.documentElement) {
+                e.preventDefault();
+            }
+        }
+        document.body.addEventListener('touchmove', preventScroll, { passive: false });
+        // but we don't want to break iframe gestures, so only block if target is body/html
+        // also safe because flipbook iframe will capture touch events for flipping anyway.
+        
+        // final style tweak: ensure loading overlay stays on top
+        const style = document.createElement('style');
+        style.textContent = `
+            .loading-overlay {
+                display: flex;
+                z-index: 100000;
+            }
+            .flipbook-iframe {
+                transition: opacity 0.2s;
+            }
+            .control-btn:active {
+                transform: scale(0.95);
+            }
+        `;
+        document.head.appendChild(style);
+    })();
+</script>
+</body>
+</html>
