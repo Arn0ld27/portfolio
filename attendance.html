@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>CGCI Attendance Hub | Immersive Course Cards</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #0a0c12;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        :root {
+            --bg-deep: #0f1117;
+            --bg-card: #161a24;
+            --primary-cyan: #00e5ff;
+            --primary-glow: rgba(0, 229, 255, 0.25);
+            --primary-dim: rgba(0, 229, 255, 0.12);
+            --text-light: #f0ede8;
+            --text-muted: #a8a4a0;
+            --success: #2dd4bf;
+            --danger: #f87171;
+            --excused: #c084fc;
+        }
+
+        /* INVISIBLE BACK BUTTON - only shows when hovering over top-left corner area */
+        .back-btn-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 9999;
+        }
+        
+        /* Hotspot area - 120px x 120px region where hovering reveals the button */
+        .back-btn-hotspot {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 120px;
+            height: 120px;
+            z-index: 9998;
+            cursor: default;
+        }
+        
+        /* The actual button - hidden by default */
+        .hidden-back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.95), rgba(0, 200, 230, 0.95));
+            color: #0a0e1a;
+            padding: 12px 24px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--primary-cyan);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            font-family: 'Inter', system-ui, sans-serif;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            transform: translateX(-10px);
+        }
+        
+        .hidden-back-btn:hover {
+            background: linear-gradient(135deg, var(--primary-cyan), #00b8d4);
+            transform: translateX(0) scale(1.05);
+            box-shadow: 0 0 25px rgba(0, 229, 255, 0.6);
+        }
+        
+        /* Show button when hovering over the hotspot area */
+        .back-btn-hotspot:hover + .hidden-back-btn,
+        .hidden-back-btn:hover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0);
+        }
+        
+        /* Visual indicator for the hotspot (only shows when hovering near it - subtle) */
+        .back-btn-hotspot::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0,229,255,0.08) 0%, rgba(0,229,255,0) 70%);
+            border-radius: 0 0 50% 0;
+            pointer-events: none;
+            transition: all 0.3s;
+            opacity: 0;
+        }
+        
+        .back-btn-hotspot:hover::before {
+            opacity: 1;
+        }
+        
+        /* Optional: add a tiny invisible hint that there's a hidden button (disappears on hover) */
+        .back-btn-hint {
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            font-size: 8px;
+            color: rgba(0, 229, 255, 0.2);
+            font-family: monospace;
+            z-index: 9997;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        
+        .back-btn-hotspot:hover + .hidden-back-btn + .back-btn-hint,
+        .back-btn-hotspot:hover ~ .back-btn-hint {
+            opacity: 0;
+        }
+
+        /* ---------- LOADING SCREEN (full overlay) ---------- */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #0a0f1c, #03060c);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 1.8rem;
+            z-index: 10000;
+            backdrop-filter: blur(6px);
+            transition: opacity 0.5s ease, visibility 0.5s;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-overlay.hide {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .spinner-ring {
+            width: 70px;
+            height: 70px;
+            border: 5px solid rgba(0, 229, 255, 0.2);
+            border-top: 5px solid var(--primary-cyan);
+            border-right: 5px solid rgba(0, 229, 255, 0.6);
+            border-radius: 50%;
+            animation: spin 0.9s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--primary-cyan);
+            font-weight: 500;
+            letter-spacing: 2px;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            background: rgba(0, 229, 255, 0.1);
+            padding: 0.3rem 1.2rem;
+            border-radius: 40px;
+            backdrop-filter: blur(4px);
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 8px;
+        }
+        .loading-dots span {
+            width: 10px;
+            height: 10px;
+            background: var(--primary-cyan);
+            border-radius: 50%;
+            animation: bounce 0.6s infinite alternate;
+        }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0% { transform: translateY(0px); opacity: 0.3; }
+            100% { transform: translateY(-12px); opacity: 1; }
+        }
+
+        .app {
+            width: 100%;
+            max-width: 1400px;
+            background: rgba(18, 22, 32, 0.92);
+            backdrop-filter: blur(8px);
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 229, 255, 0.25);
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 1.2rem 2rem;
+            background: rgba(12, 14, 20, 0.95);
+            border-bottom: 1px solid rgba(0, 229, 255, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-img {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 12px;
+            background: #1e1f2c;
+            border: 1px solid var(--primary-cyan);
+        }
+
+        .title-badge {
+            display: flex;
+            align-items: baseline;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .app-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e0fcff, var(--primary-cyan), #7ae9ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .studio-tag {
+            background: rgba(0, 229, 255, 0.15);
+            padding: 0.25rem 0.8rem;
+            border-radius: 40px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--primary-cyan);
+            border: 1px solid rgba(0, 229, 255, 0.4);
+        }
+
+        .record-count {
+            background: #1e212f;
+            padding: 0.35rem 1.2rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--primary-cyan);
+        }
+
+        .header-date {
+            font-size: 0.8rem;
+            color: #b8b2a8;
+            background: #10131e;
+            padding: 0.3rem 1.2rem;
+            border-radius: 40px;
+        }
+
+        .page {
+            display: none;
+            padding: 2rem;
+            animation: fadeSlide 0.25s ease;
+        }
+        .page.active { display: block; }
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .semester-grid {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 1.5rem 0 2rem;
+        }
+        .semester-card {
+            background: linear-gradient(145deg, #1a1e2c, #131623);
+            border-radius: 2rem;
+            padding: 2rem 2.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            min-width: 220px;
+        }
+        .semester-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-cyan);
+            box-shadow: 0 15px 30px -10px rgba(0, 229, 255, 0.2);
+        }
+        
+        /* UPDATED SEMESTER CARD FONT COLORS - More vibrant and visible */
+        .semester-name { 
+            font-size: 1.8rem; 
+            font-weight: 800; 
+            background: linear-gradient(135deg, #5a88f3, #1231f7, #4100da);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            letter-spacing: 1px;
+        }
+        
+        .semester-sub { 
+            font-size: 0.85rem; 
+            background: linear-gradient(135deg, #00e5ff, #7ae9ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-top: 0.5rem;
+            font-weight: 600;
+        }
+
+        /* ----- UPDATED COURSE CARD: FULL IMAGE ON HOVER + TEXT DISAPPEARS (BUT KEEPS YOUR ORIGINAL IMAGES) ----- */
+        .courses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        .course-card {
+            position: relative;
+            background: #11151f;
+            border-radius: 2rem;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            aspect-ratio: 4 / 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.5);
+        }
+
+        /* Image container: fills card always (background image) */
+        .course-card .course-img-full {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+            z-index: 1;
+        }
+
+        /* Text overlay layer - appears over image, with subtle background */
+        .course-card .card-text-overlay {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            color: white;
+            background: rgba(10, 14, 23, 0.7);
+            backdrop-filter: blur(5px);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            transition: opacity 0.3s ease, backdrop-filter 0.2s, visibility 0.2s;
+            padding: 1rem;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .course-card .course-name {
+            font-size: 1.7rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, var(--primary-cyan));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .course-card .course-code {
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: rgba(0, 229, 255, 0.25);
+            padding: 0.25rem 1rem;
+            border-radius: 30px;
+            display: inline-block;
+            color: #e0f2fe;
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(2px);
+        }
+
+        /* HOVER EFFECT: Image expands to whole card, text disappears completely, image scales */
+        .course-card:hover .course-img-full {
+            transform: scale(1.08);
+        }
+
+        .course-card:hover .card-text-overlay {
+            opacity: 0;
+            visibility: hidden;
+            backdrop-filter: blur(0px);
+            transition: opacity 0.25s, visibility 0s 0.25s;
+        }
+
+        /* Optional subtle glow on hover */
+        .course-card:hover {
+            border-color: var(--primary-cyan);
+            box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.4), 0 20px 30px -8px black;
+            transform: translateY(-6px);
+        }
+
+        .sections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .section-btn {
+            background: #13182a;
+            border: 1px solid #2a3048;
+            padding: 1rem;
+            border-radius: 1.2rem;
+            font-weight: 600;
+            font-size: 1rem;
+            text-align: center;
+            cursor: pointer;
+            color: #e8e2d4;
+            transition: all 0.2s;
+        }
+        .section-btn:hover { background: #1e2642; border-color: var(--primary-cyan); }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--primary-cyan);
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            margin-bottom: 1.2rem;
+            font-weight: 500;
+        }
+        .nav-btn:hover { color: #7ae9ff; }
+
+        .attendance-main {
+            max-width: 700px;
+            margin: 0 auto;
+            background: rgba(18, 22, 36, 0.9);
+            border-radius: 2rem;
+            padding: 2rem;
+            text-align: center;
+            border: 1px solid rgba(0, 229, 255, 0.3);
+        }
+        .student-name {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin: 1rem 0;
+            word-break: break-word;
+            background: linear-gradient(135deg, #e0fcff, var(--primary-cyan), #7ae9ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .student-counter {
+            font-size: 0.85rem;
+            background: #0f1322;
+            display: inline-block;
+            padding: 0.25rem 1rem;
+            border-radius: 40px;
+            color: var(--primary-cyan);
+        }
+        .prev-status-badge {
+            background: #1a2335;
+            border-radius: 30px;
+            padding: 0.3rem 1rem;
+            display: inline-block;
+            margin: 0.6rem 0;
+            font-size: 0.8rem;
+            color: #7ae9ff;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.8rem;
+            flex-wrap: wrap;
+        }
+        .action-btn {
+            padding: 0.8rem 1.8rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+            min-width: 130px;
+        }
+        .action-btn.present { background: #0a3b3a; color: #b2f5ea; border: 1px solid #2dd4bf; }
+        .action-btn.present:hover { background: #2dd4bf; color: #0a2e2a; }
+        .action-btn.absent { background: #5c1a1a; color: #fecaca; border: 1px solid #f87171; }
+        .action-btn.absent:hover { background: #f87171; color: #3b0a0a; }
+        .action-btn.excused { background: #3b2a5e; color: #e9d5ff; border: 1px solid #c084fc; }
+        .action-btn.excused:hover { background: #c084fc; color: #2e1065; }
+
+        .stats-panel {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.8rem;
+        }
+        .stat-card {
+            background: #111626;
+            border-radius: 1.2rem;
+            padding: 1rem;
+            text-align: center;
+            flex: 1;
+            border: 1px solid #2a2f48;
+        }
+        .stat-number { font-size: 2rem; font-weight: 800; }
+        .stat-number.present { color: #2dd4bf; }
+        .stat-number.absent { color: #f87171; }
+        .stat-number.excused { color: #c084fc; }
+        .stat-label { color: #b8b2a0; font-size: 0.7rem; }
+
+        .filter-section {
+            background: #111526cc;
+            border-radius: 1.2rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid #2a2f4a;
+        }
+        .filter-label { color: var(--primary-cyan); font-weight: 600; font-size: 0.7rem; margin-bottom: 0.4rem; }
+        .filter-select { width: 100%; background: #090c18; border: 1px solid #2a2f50; padding: 0.7rem; border-radius: 1rem; color: #f0e8dc; }
+        .status-buttons { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+        .status-btn { background: #10152a; border: 1px solid #2a3050; padding: 0.5rem 1rem; border-radius: 2rem; font-size: 0.8rem; cursor: pointer; flex: 1; text-align: center; color: #cdc6b8; }
+        .status-btn.active { background: var(--primary-cyan); color: #0a0e1a; border-color: var(--primary-cyan); font-weight: bold; }
+        .student-list { max-height: 420px; overflow-y: auto; margin-top: 1rem; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; background: #11162acc; margin-bottom: 0.6rem; padding: 0.8rem 1rem; border-radius: 1rem; flex-wrap: wrap; gap: 6px; border: 1px solid #2a2f4e; }
+        .list-name { font-weight: 600; color: #f2e9db; }
+        .btn-primary, .btn-secondary, .btn-outline { padding: 0.7rem 1.2rem; border-radius: 2rem; font-weight: 600; border: none; cursor: pointer; }
+        .btn-primary { background: var(--primary-cyan); color: #0a0e1a; }
+        .btn-primary:hover { background: #7ae9ff; }
+        .btn-secondary { background: #262d44; color: #e8e0d0; border: 1px solid #3a405e; }
+        .reset-btn { background: rgba(248, 113, 113, 0.15); border: 1px solid #f87171; color: #fca5a5; padding: 0.5rem; border-radius: 2rem; width: 100%; margin-top: 0.5rem; cursor: pointer; }
+        .flex-btns { display: flex; gap: 1rem; margin-top: 1.2rem; flex-wrap: wrap; }
+        .export-success { background: var(--primary-cyan); color: #0a0e1a; padding: 0.5rem; border-radius: 2rem; text-align: center; margin-top: 1rem; animation: fadeOut 3s forwards; font-weight: 600; }
+        @keyframes fadeOut { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+        
+        .data-hint {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 229, 255, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 12px;
+            padding: 8px 16px;
+            font-size: 11px;
+            color: var(--primary-cyan);
+            backdrop-filter: blur(4px);
+            pointer-events: none;
+            z-index: 100;
+            font-family: monospace;
+        }
+
+        @media (max-width: 800px) {
+            body { padding: 1rem; }
+            .student-name { font-size: 2rem; }
+            .semester-card { padding: 1.2rem 1.5rem; }
+            .data-hint { display: none; }
+            .course-card .course-name { font-size: 1.2rem; }
+            .semester-name { font-size: 1.4rem; }
+            .back-btn-hotspot {
+                width: 100px;
+                height: 100px;
+            }
+            .hidden-back-btn { 
+                padding: 8px 18px; 
+                font-size: 0.8rem; 
+                top: 15px; 
+                left: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- INVISIBLE BACK BUTTON - only shows when hovering over top-left corner -->
+<div class="back-btn-container">
+    <div class="back-btn-hotspot"></div>
+    <a href="myportfolio.html" class="hidden-back-btn" id="globalBackBtn">
+        Back 
+    </a>
+    <div class="back-btn-hint">⤴</div>
+</div>
+
+<!-- FULLSCREEN LOADING OVERLAY -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner-ring"></div>
+    <div class="loading-text">MY ATTENDANCE</div>
+    <div class="loading-dots">
+        <span></span><span></span><span></span>
+    </div>
+</div>
+
+<div class="app">
+    <div class="header">
+        <div class="logo-area">
+            <img src="images/logo.jpg" alt="CGCI Logo" class="logo-img" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect fill=\'%2300e5ff\' width=\'100\' height=\'100\'/%3E%3Ctext x=\'50\' y=\'67\' font-size=\'32\' text-anchor=\'middle\' fill=\'%230a0e1a\' font-weight=\'bold\'%3ECGCI%3C/text%3E%3C/svg%3E'">
+            <div class="title-badge">
+                <span class="app-title">ARNOLD ATTENDANCE</span>
+            </div>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <span class="record-count" id="recordCount">0 records</span>
+            <div class="header-date" id="currentDateDisplay"></div>
+        </div>
+    </div>
+
+    <div id="semesterPage" class="page">
+        <div style="text-align: center; margin-bottom: 0.5rem;">
+            <h2 style="color: #ece3d4; font-weight: 500;">Select Academic Term</h2>
+            <p style="color: #a8a2a0; font-size: 0.85rem;">First or Second Semester</p>
+        </div>
+        <div class="semester-grid">
+            <div class="semester-card" data-sem="1st Semester">
+                <div class="semester-name">1st Semester</div>
+                <div class="semester-sub">2026-2027</div>
+            </div>
+            <div class="semester-card" data-sem="2nd Semester">
+                <div class="semester-name">2nd Semester</div>
+                <div class="semester-sub">2026-2027</div>
+            </div>
+        </div>
+        <div style="margin-top: 1.8rem; text-align: center;">
+            <button class="btn-outline" style="background:#ffffff; border-color: #00e5ff40;" onclick="openHistory()"> HISTORY ARCHIVE</button>
+        </div>
+    </div>
+
+    <div id="coursesPage" class="page">
+        <button class="nav-btn" onclick="backToSemester()">← BACK TO SEMESTER</button>
+        <div id="semesterBadge" style="display: inline-block; background: rgba(0, 229, 255, 0.12); padding: 0.2rem 1rem; border-radius: 30px; margin-bottom: 1rem; color: var(--primary-cyan); font-size: 0.8rem;"></div>
+        <div class="courses-grid" id="coursesGrid"></div>
+    </div>
+
+    <div id="sectionsPage" class="page">
+        <button class="nav-btn" onclick="backToCourses()">← BACK TO COURSES</button>
+        <h3 style="color:#e2d8c8;" id="sectionHeaderTitle">Select Section</h3>
+        <div id="sectionsGrid" class="sections-grid"></div>
+    </div>
+
+    <div id="attendancePage" class="page">
+        <button class="nav-btn" onclick="exitAttendance()">← EXIT ATTENDANCE</button>
+        <div id="attendanceCard"></div>
+    </div>
+
+    <div id="historyPage" class="page">
+        <button class="nav-btn" onclick="backToSemesterFromHistory()">← BACK</button>
+        <div class="filter-section"><div class="filter-label"> DATE</div><select id="dateSelect" class="filter-select" onchange="onDateChange()"><option value="all">All Dates</option></select></div>
+        <div class="filter-section"><div class="filter-label"> SUBJECT</div><select id="subjectSelect" class="filter-select" onchange="onSubjectChange()"><option value="all">All Subjects</option></select></div>
+        <div class="filter-section"><div class="filter-label"> SECTION</div><select id="sectionSelect" class="filter-select" onchange="onSectionChange()"><option value="all">All Sections</option></select></div>
+        <div class="filter-section"><div class="filter-label"> STATUS</div><div class="status-buttons"><div class="status-btn" data-status="all" onclick="setStatusFilter('all')">All</div><div class="status-btn present" data-status="present" onclick="setStatusFilter('present')">Present (1)</div><div class="status-btn absent" data-status="absent" onclick="setStatusFilter('absent')">Absent (0)</div><div class="status-btn excused" data-status="excused" onclick="setStatusFilter('excused')">Excused (E)</div></div></div>
+        <button class="reset-btn" onclick="resetAllFilters()">⟳ Reset Filters</button>
+        <div id="historyResults"><div class="empty-state" style="text-align:center;padding:2rem; color:#a8a2a0;">✨ Select filters to see records</div></div>
+        <div class="flex-btns"><button class="btn-secondary" onclick="exportFilteredData()">📎 Export CSV</button><button class="btn-outline" onclick="clearHistory()">🗑 Clear History</button></div>
+        <div id="exportMessage"></div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // YOUR ORIGINAL STUDENTS DATA
+    // ============================================================
+    const STUDENTS_DATA = {
+        "GE ELECT": {
+            displayName: "BSBA",
+            image: "images/cs110.jpg",
+            sections: {
+                "BSBA 1B": ["Emmarie Monique R. Angelo", "Maria Joana L. Arevalo", "Wilma C. Avila", "Christelle C. Baladad", "Clive Miche B. Balderrama", "Ace Nathaniel A. Bondoc", "Mae Anne A. Briones", "Miles Gian G. Cabaldo", "Jamaica I. Cabarrubias", "Lowel Lloyd M. Castro", "Zhea Faye Zaixa C. Castro", "Jared S. Dulay", "Christine Mae S. Durado", "Princess N. Duria", "Cassandra B. Ellana", "Micah Rose I. Espiritu", "Aujean E. Esteban", "Mark Gian D. Fajardo", "Mary Grace M. Florendo", "Beverly A. Fundales", "Novalyn S. Gines", "Nancy M. Habonete", "Aria Khaye U. Hernando", "John Keneth R. Ilacad", "Trixie C. Jaca", "Cris Aljur J. Jacang", "Princess Kate D. Jampil", "Princess Jirah A. Lindain", "Kimberly G. Lita", "Jester P. Macalinao", "Oliver Jr. A. Marzan", "Josephine C. Molina", "Mary Claire M. Molina", "Marcella Chlariz E. Nocon", "Arnie Ritz A. Peralta", "Ken Andrei C. Portelo", "John Mark R. Quiamdao", "Rachelle May S. Ramos", "John Restless V. Samin", "Reymark M. Singol", "Shiela Mae C. Soriano", "Trisha S. Soriano", "Hyddie Via B. Toralba", "Raiza Mae M. Valenton"],
+                "BSBA 1C": ["Kristel A. Alferez", "Mhedy Lee A. Ambobot", "Jannella G. Angelo", "Amiya Czamara G. Astero", "Aljur P. Barcelona", "Darell L. Bulan", "Angel C. Collado", "Joshua C. Concepcion", "Joseph Rain A. De Guzman", "Cherrylyn D. Dice", "Lorenz Gabriel L. Dionaldo", "Milarose C. Elicarte", "Lea Joy R. Fernandez", "Yuna Ji-Ashanti M. Flores", "Michael Ray S. Franco", "Ysabelle P. Gempesaw", "Johnlloyd B. Jimenez", "Cervano Rain A. Labayan", "John Rey J. Lacadin", "Princess Shane A. Lazaro", "Raymond A. Leonzon", "Frenciz Mae B. Limon", "Althia Mae T. Loren", "Mia Lysa D. Manzano", "Rianne Mae M. Natividad", "Michaela A. Navarro", "Rich Mark L. Nitura", "Sheika C. Ortiz", "Sarah Jane T. Pablo", "Manuel III D. Pae", "Librey Ann S. Pobre", "Rea May R. Pulido", "Jenny T. Ramos", "Mica Mae G. Sanidad", "Alyssa S. Talplacido", "Eloisa S. Talplacido", "Danica A. Tolentino", "Perlyn B. Tubera", "Lexell James M. Victoria", "Alicia Mae V. Zamora"],
+                "BSBA 1D": ["Arnold James O. Agamao", "Cherish Janine A. Alvaro", "Krissa Aicelle T. Antonio", "Leidy V. Balanag", "Kristine Girlie G. Berame", "Arvin Jhon V. Blanco", "Aron R. Buenaventura", "Eilah Bea M. Bulosan", "Kate D. Calso", "Ron Earl B. Cariaga", "Micaela Vhea Y. Castillo", "Aira Mae L. Cawayan", "Ryzen G. Culala", "John Lester C. Dela Cruz", "Christel Joy M. Dulay", "Artonie O. Duque", "Berna Krissa T. Esmundo", "Blessing M. Fajiculay", "Lady Anne Betty R. Fernandez", "Gian Carlo D. Frias", "Alfred F. Fronda", "Jian Isaiah V. Gallardo", "Gian Carlos Q. Herrera", "Rosenda May P. Macabante", "Jonathan M. Malicse", "Lyka Marie M. Manzano", "Denniel John C. Marcelo", "Mitch Nicole D. Marcos", "Ron Jayson T. Mendoza", "John Bryle D. Merculio", "Angela V. Millena", "Alyssa Jane C. Parocha", "Ma. Veronica C. Parocha", "Angel Mae D. Pascual", "Edison N. Pascual", "Erwin Jr. M. Patiag", "Pia C. Peralta", "Mary Angel R. Pulido", "Lovely Joy A. Ramos", "John Dereck T. Santos", "Hana Lea G. Santua", "Paul Jon C. Santua", "Daiki R. Sato", "Princes Jane P. Tacadena", "Cristine Joy V. Tibayan", "Jewel Aleyah B. Urbano", "Frince Kim V. Valdez", "Paula L. Villar"]
+            }
+        },
+        "CS110,CS124": {
+            displayName: "BSCS",
+            image: "images/cs124.jpg",
+            sections: {
+                "BSCS 4A": ["Marc Bannawol", "Vhon Bantigue", "Sophia Reyes", "James Alvarez"],
+                "BSCS 4B": ["Chloe Perez", "Nathan Diaz", "Isabel Ramos"],
+                "BSCS 3A": ["Marc Bannawol", "Vhon Bantigue", "Sophia Reyes", "James Alvarez"],
+                "BSCS 3B": ["Marc Bannawol", "Vhon Bantigue", "Sophia Reyes", "James Alvarez"],
+            }
+        },
+        "GE ELECT 2": {
+            displayName: "BAPS",
+            image: "images/gelect2.jpg",
+            sections: {
+                "BAPS 3C": ["Ivan Joseph S. Bojala", "Kyla R. De Guzman", "Jessabelle L. Esteban", "Madelyn D. Margarijo", "Raiven D. Molina", "Mark Jay P. Ojano", "Crystel R. Ordas", "Glen Joe D. Perez", "Kirsten Jilliene T. Valdez", "James B. Victoria", "Jeffrey A. Villanueva"]
+            }
+        }
+    };
+
+    const FALLBACK_IMG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2300e5ff20'/%3E%3Ctext x='50' y='55' font-size='24' text-anchor='middle' fill='%2300e5ff'%3ECGCI%3C/text%3E%3C/svg%3E";
+    let history = {};
+    let currentSemester = "";
+    let currentSubjectKey = "";
+    let currentSectionName = "";
+    let currentStudentList = [];
+    let currentIndex = 0;
+    let today = new Date().toISOString().split('T')[0];
+    let selectedDate = "all", selectedSubject = "all", selectedSection = "all", selectedStatus = "all";
+
+    // --- REFRESH PERSISTENCE ---
+    const STATE_KEY = "cgci_app_state_v2";
+    function saveAppState(extra = {}) {
+        const state = {
+            currentPageId: document.querySelector('.page.active')?.id || 'semesterPage',
+            currentSemester,
+            currentSubjectKey,
+            currentSectionName,
+            currentIndex,
+            currentStudentListSnapshot: currentStudentList,
+            ...extra
+        };
+        localStorage.setItem(STATE_KEY, JSON.stringify(state));
+    }
+    function restoreAppState() {
+        const saved = localStorage.getItem(STATE_KEY);
+        if(!saved) return false;
+        try {
+            const state = JSON.parse(saved);
+            if(state.currentSemester) currentSemester = state.currentSemester;
+            if(state.currentSubjectKey) currentSubjectKey = state.currentSubjectKey;
+            if(state.currentSectionName) currentSectionName = state.currentSectionName;
+            if(Array.isArray(state.currentStudentListSnapshot) && state.currentStudentListSnapshot.length) currentStudentList = state.currentStudentListSnapshot;
+            if(typeof state.currentIndex === 'number') currentIndex = state.currentIndex;
+            return state.currentPageId;
+        } catch(e) { return false; }
+    }
+    function clearAppStateOnExitFromDeep() {
+        localStorage.removeItem(STATE_KEY);
+    }
+
+    // Global back button function - navigate to front page
+    function goToFrontPage() {
+        // To connect to external file, uncomment the line below and comment the internal navigation
+        // window.location.href = "index.html";  // Change this to your front page path
+        
+        // Internal fallback - goes to semester page (change this as needed)
+        backToSemester();
+    }
+
+    window.showPage = function(id) {
+        document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById("currentDateDisplay").innerHTML = today;
+        if(id !== 'historyPage') saveAppState();
+    };
+    
+    window.backToSemester = function() { 
+        clearAppStateOnExitFromDeep(); 
+        currentSemester = ""; currentSubjectKey = ""; currentSectionName = ""; currentStudentList = []; currentIndex = 0;
+        saveAppState(); 
+        showPage("semesterPage"); 
+    };
+    window.backToCourses = function() { 
+        if(currentSemester) saveAppState(); 
+        showPage("coursesPage"); 
+        loadCourses(); 
+    };
+    window.exitAttendance = function() { 
+        showPage("sectionsPage"); 
+        if(currentSubjectKey) loadSections(currentSubjectKey); 
+        saveAppState(); 
+    };
+    window.backToSemesterFromHistory = function() { showPage("semesterPage"); };
+
+    function loadData() { 
+        const saved = localStorage.getItem("cgci_attendance_clean"); 
+        if(saved) try{ history=JSON.parse(saved); }catch(e){} 
+        updateRecordCount(); 
+    }
+    function saveData() { 
+        localStorage.setItem("cgci_attendance_clean", JSON.stringify(history)); 
+        updateRecordCount(); 
+        saveAppState(); 
+    }
+    function updateRecordCount() { 
+        let t=0; for(let d in history) t+=Object.keys(history[d]).length; 
+        document.getElementById("recordCount").innerText = t + " record"+(t!==1?"s":""); 
+    }
+    function getStatusValue(s){ return s==="Present"?"1":s==="Absent"?"0":"E"; }
+    function getTodayRecords(){ if(!history[today]) history[today]={}; return history[today]; }
+    function saveRecord(n,status){ 
+        if(!history[today]) history[today]={}; 
+        history[today][n]={status, subject:currentSubjectKey, section:currentSectionName, semester:currentSemester}; 
+        saveData(); 
+    }
+
+    window.selectSemester = function(sem){ 
+        currentSemester=sem; 
+        document.getElementById("semesterBadge").innerHTML=`🎓 ${currentSemester}`; 
+        clearAppStateOnExitFromDeep();
+        currentSubjectKey = ""; currentSectionName = ""; currentStudentList = []; currentIndex = 0;
+        saveAppState();
+        loadCourses(); 
+        showPage("coursesPage"); 
+    };
+
+    function loadCourses(){
+        const container = document.getElementById("coursesGrid"); 
+        container.innerHTML = "";
+        for(let [code, info] of Object.entries(STUDENTS_DATA)){
+            const card = document.createElement("div"); 
+            card.className = "course-card";
+            let imgUrl = info.image && info.image !== "" ? info.image : FALLBACK_IMG;
+            card.innerHTML = `
+                <img src="${imgUrl}" class="course-img-full" alt="${info.displayName}" onerror="this.src='${FALLBACK_IMG}'">
+                <div class="card-text-overlay">
+                    <div class="course-name">${info.displayName}</div>
+                    <div class="course-code">${code}</div>
+                </div>
+            `;
+            card.onclick = () => { 
+                currentSubjectKey = code; 
+                currentSectionName = ""; currentStudentList = []; currentIndex = 0;
+                saveAppState();
+                loadSections(code); 
+                showPage("sectionsPage"); 
+                document.getElementById("sectionHeaderTitle").innerHTML = `${info.displayName} (${code}) — ${currentSemester}`; 
+            };
+            container.appendChild(card);
+        }
+    }
+
+    function loadSections(subjectCode){
+        const container = document.getElementById("sectionsGrid"); 
+        container.innerHTML = "";
+        const sectionsObj = STUDENTS_DATA[subjectCode].sections;
+        for(let sec in sectionsObj){
+            const btn = document.createElement("button"); 
+            btn.className = "section-btn";
+            btn.innerText = `${sec}`;
+            btn.onclick = () => { 
+                currentSectionName = sec; 
+                currentStudentList = [...sectionsObj[sec]]; 
+                currentIndex = 0; 
+                saveAppState();
+                renderAttendanceCard(); 
+                showPage("attendancePage"); 
+            };
+            container.appendChild(btn);
+        }
+    }
+
+    function renderAttendanceCard(){
+        const container = document.getElementById("attendanceCard"); 
+        const todayRec = getTodayRecords();
+        if(currentIndex >= currentStudentList.length){
+            let p=0,a=0,e=0; 
+            currentStudentList.forEach(s=>{ let r=todayRec[s]; if(r){ if(r.status==="Present") p++; else if(r.status==="Absent") a++; else if(r.status==="Excused") e++; } });
+            container.innerHTML = `<div class="stats-panel"><div class="stat-card"><div class="stat-number present">${p}</div><div class="stat-label">PRESENT</div></div><div class="stat-card"><div class="stat-number absent">${a}</div><div class="stat-label">ABSENT</div></div><div class="stat-card"><div class="stat-number excused">${e}</div><div class="stat-label">EXCUSED</div></div></div><button class="btn-primary" style="width:100%;" onclick="exportTodaySection()">💾 SAVE & EXPORT REPORT</button><hr style="margin:1rem 0;border-color:#2a2f4a;"><button class="btn-secondary" style="width:100%;" onclick="exitAttendance()">← BACK TO SECTIONS</button>`;
+            saveAppState();
+            return;
+        }
+        const student = currentStudentList[currentIndex]; 
+        const existing = todayRec[student];
+        const prevHtml = existing ? `<div class="prev-status-badge">Previous: ${existing.status}</div>` : "";
+        container.innerHTML = `<div class="attendance-main"><div class="student-counter">${currentIndex+1} / ${currentStudentList.length}</div><div class="student-name">${student}</div>${prevHtml}<div class="action-buttons"><button class="action-btn present" onclick="markAndNext('Present')">✓ PRESENT (1)</button><button class="action-btn absent" onclick="markAndNext('Absent')">✗ ABSENT (0)</button><button class="action-btn excused" onclick="markAndNext('Excused')">○ EXCUSED (E)</button></div><div style="margin-top:1rem;"><button class="btn-outline" style="background:#1a1e30;" onclick="skipNext()"> Skip Student</button></div></div>`;
+        saveAppState();
+    }
+
+    window.markAndNext=function(s){ saveRecord(currentStudentList[currentIndex],s); currentIndex++; renderAttendanceCard(); saveAppState(); };
+    window.skipNext=function(){ if(currentIndex<currentStudentList.length-1){ currentIndex++; renderAttendanceCard(); saveAppState(); } else { currentIndex=currentStudentList.length; renderAttendanceCard(); saveAppState(); } };
+    window.exportTodaySection=function(){ 
+        let recs=history[today]; if(!recs){ alert("No records yet"); return; } 
+        let filtered=Object.entries(recs).filter(([_,d])=>d.subject===currentSubjectKey&&d.section===currentSectionName); 
+        if(!filtered.length){ alert("No attendance for this section today"); return; } 
+        let rows=[["Student","Status","Value","Subject","Section","Semester","Date"]]; 
+        filtered.forEach(([n,d])=>rows.push([`"${n}"`,d.status,getStatusValue(d.status),d.subject,d.section,d.semester||currentSemester,today])); 
+        downloadCSV(rows,`attendance_${currentSubjectKey}_${today}.csv`); 
+        showExportMsg(`✅ saved ${filtered.length} records`); 
+    };
+    
+    window.openHistory=function(){ selectedDate="all"; selectedSubject="all"; selectedSection="all"; selectedStatus="all"; loadDateOps(); loadSubOps(); loadSecOps(); updateStatusBtns(); updateHistoryResults(); showPage("historyPage"); };
+    function loadDateOps(){ let dates=Object.keys(history).sort().reverse(); let sel=document.getElementById("dateSelect"); sel.innerHTML='<option value="all">All Dates</option>'; dates.forEach(d=>sel.innerHTML+=`<option value="${d}">${d} (${Object.keys(history[d]).length})</option>`); sel.value=selectedDate; }
+    function loadSubOps(){ let subs=new Set(); for(let d in history) for(let rec of Object.values(history[d])) subs.add(rec.subject); let sel=document.getElementById("subjectSelect"); sel.innerHTML='<option value="all">All Subjects</option>'; [...subs].sort().forEach(s=>sel.innerHTML+=`<option value="${s}">${s}</option>`); sel.value=selectedSubject; }
+    function loadSecOps(){ let secs=new Set(); for(let d in history) for(let rec of Object.values(history[d])) if(selectedSubject==="all"||rec.subject===selectedSubject) secs.add(rec.section); let sel=document.getElementById("sectionSelect"); sel.innerHTML='<option value="all">All Sections</option>'; [...secs].sort().forEach(s=>sel.innerHTML+=`<option value="${s}">${s}</option>`); sel.value=selectedSection; }
+    function updateStatusBtns(){ document.querySelectorAll(".status-btn").forEach(btn=>{ btn.classList.remove("active"); if(btn.getAttribute("data-status")===selectedStatus) btn.classList.add("active"); }); }
+    window.onDateChange=function(){ selectedDate=document.getElementById("dateSelect").value; updateHistoryResults(); };
+    window.onSubjectChange=function(){ selectedSubject=document.getElementById("subjectSelect").value; selectedSection="all"; loadSecOps(); updateHistoryResults(); };
+    window.onSectionChange=function(){ selectedSection=document.getElementById("sectionSelect").value; updateHistoryResults(); };
+    window.setStatusFilter=function(st){ selectedStatus=st; updateStatusBtns(); updateHistoryResults(); };
+    window.resetAllFilters=function(){ selectedDate="all"; selectedSubject="all"; selectedSection="all"; selectedStatus="all"; document.getElementById("dateSelect").value="all"; document.getElementById("subjectSelect").value="all"; loadSecOps(); updateStatusBtns(); updateHistoryResults(); };
+    function updateHistoryResults(){ let recs=[]; for(let date in history){ if(selectedDate!=="all"&&date!==selectedDate) continue; for(let [name,data] of Object.entries(history[date])){ if(selectedSubject!=="all"&&data.subject!==selectedSubject) continue; if(selectedSection!=="all"&&data.section!==selectedSection) continue; if(selectedStatus!=="all"){ let map={present:"Present",absent:"Absent",excused:"Excused"}; if(data.status!==map[selectedStatus]) continue; } recs.push({date,name,...data}); } } recs.sort((a,b)=>b.date.localeCompare(a.date)); let container=document.getElementById("historyResults"); if(!recs.length){ container.innerHTML=`<div style="text-align:center;padding:2rem;color:#a8a2a0;">✨ No records match</div>`; return; } let p=0,a=0,e=0; recs.forEach(r=>{ if(r.status==="Present") p++; else if(r.status==="Absent") a++; else if(r.status==="Excused") e++; }); let html=`<div class="stats-panel"><div class="stat-card"><div class="stat-number present">${p}</div><div class="stat-label">PRESENT</div></div><div class="stat-card"><div class="stat-number absent">${a}</div><div class="stat-label">ABSENT</div></div><div class="stat-card"><div class="stat-number excused">${e}</div><div class="stat-label">EXCUSED</div></div></div><div class="student-list">`; recs.forEach(r=>{ let icon=r.status==="Present"?"✓":(r.status==="Absent"?"✗":"○"); let val=getStatusValue(r.status); html+=`<div class="list-item"><span class="list-name">${r.name}</span><span style="color:#b8b0a0;">${r.date} • ${r.subject} • ${r.section} • ${r.semester||"—"}</span><span style="background:#1e1f32;padding:4px 10px;border-radius:40px;">${icon} ${r.status} (${val})</span></div>`; }); html+=`</div>`; container.innerHTML=html; }
+    window.exportFilteredData=function(){ let recs=[]; for(let date in history){ if(selectedDate!=="all"&&date!==selectedDate) continue; for(let [name,data] of Object.entries(history[date])){ if(selectedSubject!=="all"&&data.subject!==selectedSubject) continue; if(selectedSection!=="all"&&data.section!==selectedSection) continue; if(selectedStatus!=="all"){ let map={present:"Present",absent:"Absent",excused:"Excused"}; if(data.status!==map[selectedStatus]) continue; } recs.push({date,name,...data}); } } if(!recs.length){ alert("No data"); return; } let rows=[["Student","Status","Value","Subject","Section","Semester","Date"]]; recs.forEach(r=>rows.push([`"${r.name}"`,r.status,getStatusValue(r.status),r.subject,r.section,r.semester||"—",r.date])); downloadCSV(rows,`filtered_attendance.csv`); showExportMsg(`Exported ${recs.length} records`); };
+    window.clearHistory=function(){ if(confirm("Delete all attendance records?")){ history={}; saveData(); openHistory(); } };
+    function downloadCSV(rows,file){ let csv=rows.map(r=>r.join(",")).join("\n"); let blob=new Blob(["\uFEFF"+csv],{type:"text/csv"}); let a=document.createElement("a"); let url=URL.createObjectURL(blob); a.href=url; a.download=file; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
+    function showExportMsg(msg){ let div=document.getElementById("exportMessage"); div.innerHTML=`<div class="export-success">${msg}</div>`; setTimeout(()=>div.innerHTML="",3000); }
+
+    // Attach semester event listeners
+    document.querySelectorAll('.semester-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            const sem = card.getAttribute('data-sem');
+            if(sem) selectSemester(sem);
+        });
+    });
+
+    // Attach global back button
+    document.getElementById('globalBackBtn').addEventListener('click', goToFrontPage);
+
+    function init() {
+        loadData();
+        const restoredPage = restoreAppState();
+        if(restoredPage && restoredPage !== 'semesterPage') {
+            if((restoredPage === 'coursesPage' || restoredPage === 'sectionsPage' || restoredPage === 'attendancePage') && !currentSemester) {
+                showPage("semesterPage");
+            } else {
+                showPage(restoredPage);
+                if(currentSubjectKey && restoredPage !== 'semesterPage') {
+                    if(restoredPage === 'coursesPage') loadCourses();
+                    else if(restoredPage === 'sectionsPage') { loadCourses(); setTimeout(()=>{ if(currentSubjectKey) loadSections(currentSubjectKey); }, 20); }
+                    else if(restoredPage === 'attendancePage' && currentStudentList.length) { 
+                        loadCourses(); 
+                        setTimeout(()=>{ if(currentSubjectKey) loadSections(currentSubjectKey); setTimeout(()=> renderAttendanceCard(), 30); }, 30); 
+                    }
+                } else if(restoredPage === 'coursesPage') loadCourses();
+                else showPage("semesterPage");
+            }
+        } else {
+            showPage("semesterPage");
+        }
+        document.getElementById("currentDateDisplay").innerHTML = today;
+        setTimeout(() => {
+            const loader = document.getElementById('loadingOverlay');
+            if(loader) loader.classList.add('hide');
+        }, 500);
+    }
+    init();
+</script>
+</body>
+</html>
